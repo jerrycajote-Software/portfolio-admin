@@ -1,0 +1,105 @@
+// Prisma Schema for Personal Portfolio
+// Shared by portfolio-frontend and portfolio-admin
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  password  String   // bcrypt-hashed via Auth.js credentials provider
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Projects ────────────────────────────────────────────────────────────────
+
+model Project {
+  id           Int      @id @default(autoincrement())
+  title        String
+  slug         String   @unique
+  description  String
+  content      String?  // rich-text / MDX content for the detail page
+  thumbnailUrl String?
+  repoUrl      String?
+  liveUrl      String?
+  featured     Boolean  @default(false)
+  published    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  owner   User @relation(fields: [ownerId], references: [id])
+  ownerId Int
+
+  tags ProjectTag[]
+}
+
+// ─── Tags (many-to-many) ─────────────────────────────────────────────────────
+
+model Tag {
+  id       Int          @id @default(autoincrement())
+  name     String       @unique
+  projects ProjectTag[]
+}
+
+model ProjectTag {
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId     Int
+
+  @@id([projectId, tagId])
+}
+
+// ─── Skills ──────────────────────────────────────────────────────────────────
+
+model Skill {
+  id       Int    @id @default(autoincrement())
+  name     String @unique
+  category String // e.g. "Frontend", "Backend", "DevOps", "Database"
+  icon     String? // URL or icon class
+  level    Int    @default(50) // proficiency 0-100
+}
+
+// ─── Contact Messages ────────────────────────────────────────────────────────
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── Blog Posts (optional, for future use) ───────────────────────────────────
+
+model BlogPost {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String   // MDX or HTML
+  coverImage  String?
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
