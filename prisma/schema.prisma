@@ -7,7 +7,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL") // pooled connection (app runtime)
+  directUrl = env("DIRECT_URL")   // direct connection (prisma migrate)
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
