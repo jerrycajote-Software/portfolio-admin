@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { signOut } from "next-auth/react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -38,6 +39,13 @@ export function AdminSidebar() {
           })}
         </ul>
       </nav>
+      <button
+        type="button"
+        onClick={() => signOut({ redirectTo: "/login" })}
+        className="mt-8 w-full text-left px-4 py-2 rounded text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+      >
+        Sign out
+      </button>
     </aside>
   );
 }

@@ -54,7 +54,7 @@ const skills = [
 ];
 
 async function main() {
-  const email = process.env.SEED_ADMIN_EMAIL ?? "admin@example.com";
+  const email = (process.env.SEED_ADMIN_EMAIL ?? "admin@example.com").toLowerCase();
   const rawPassword = process.env.SEED_ADMIN_PASSWORD;
   const passwordHash = await bcrypt.hash(rawPassword ?? randomBytes(24).toString("hex"), 12);
 
@@ -75,7 +75,7 @@ async function main() {
     };
     await prisma.project.upsert({
       where: { slug: data.slug },
-      update: { ...data, published: true, tags: { deleteMany: {}, ...tagLinks } },
+      update: { ...data, published: true, ownerId: admin.id, tags: { deleteMany: {}, ...tagLinks } },
       create: { ...data, published: true, ownerId: admin.id, tags: tagLinks },
     });
   }

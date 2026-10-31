@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { withAdmin } from "@/lib/withAdmin";
 
 const projectSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -18,7 +19,7 @@ const projectSchema = z.object({
 
 type ProjectFormData = z.infer<typeof projectSchema>;
 
-export async function getServerSideProps() {
+export const getServerSideProps = withAdmin(async () => {
   const projects = await prisma.project.findMany({
     orderBy: { createdAt: "desc" },
     include: { tags: { include: { tag: true } } },
@@ -29,7 +30,7 @@ export async function getServerSideProps() {
       projects: JSON.parse(JSON.stringify(projects)),
     },
   };
-}
+});
 
 export default function AdminProjects({ projects }: any) {
   const [showForm, setShowForm] = useState(false);

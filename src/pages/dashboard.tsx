@@ -1,7 +1,8 @@
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { prisma } from "@/lib/prisma";
+import { withAdmin } from "@/lib/withAdmin";
 
-export async function getServerSideProps() {
+export const getServerSideProps = withAdmin(async () => {
   const [projectCount, messageCount, skillCount, blogCount] = await Promise.all([
     prisma.project.count(),
     prisma.contactMessage.count({ where: { read: false } }),
@@ -12,7 +13,7 @@ export async function getServerSideProps() {
   return {
     props: { projectCount, messageCount, skillCount, blogCount },
   };
-}
+});
 
 interface DashboardProps {
   projectCount: number;

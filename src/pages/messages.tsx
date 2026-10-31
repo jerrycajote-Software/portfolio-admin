@@ -1,7 +1,8 @@
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { prisma } from "@/lib/prisma";
+import { withAdmin } from "@/lib/withAdmin";
 
-export async function getServerSideProps() {
+export const getServerSideProps = withAdmin(async () => {
   const messages = await prisma.contactMessage.findMany({
     orderBy: { createdAt: "desc" },
   });
@@ -11,7 +12,7 @@ export async function getServerSideProps() {
       messages: JSON.parse(JSON.stringify(messages)),
     },
   };
-}
+});
 
 export default function Messages({ messages }: any) {
   const toggleRead = async (id: number, read: boolean) => {
