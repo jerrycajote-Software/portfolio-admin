@@ -24,6 +24,12 @@ export default function Messages({ messages }: any) {
     window.location.reload();
   };
 
+  const deleteMessage = async (id: number) => {
+    if (!window.confirm("Delete this message? This cannot be undone.")) return;
+    await fetch(`/api/messages/${id}`, { method: "DELETE" });
+    window.location.reload();
+  };
+
   return (
     <div className="flex">
       <AdminSidebar />
@@ -55,6 +61,12 @@ export default function Messages({ messages }: any) {
                     }`}
                   >
                     {msg.read ? "Mark Unread" : "Mark Read"}
+                  </button>
+                  <button
+                    onClick={() => deleteMessage(msg.id)}
+                    className="px-3 py-1 rounded text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100"
+                  >
+                    Delete
                   </button>
                 </div>
               </div>
