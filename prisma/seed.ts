@@ -53,6 +53,19 @@ const skills = [
   { name: "Git", category: "DevOps", level: 75 },
 ];
 
+const blogPosts = [
+  {
+    slug: "building-my-portfolio-with-nextjs-and-prisma",
+    title: "Building My Portfolio with Next.js, TypeScript, and Prisma",
+    excerpt:
+      "How I designed a two-app portfolio architecture with a public Next.js frontend, a protected admin dashboard, and a shared Neon PostgreSQL database.",
+    content:
+      "This portfolio separates the public-facing site (`portfolio-frontend`) from the content management dashboard (`portfolio-admin`), while sharing a single PostgreSQL database hosted on Neon.\n\n## Why Two Apps?\n\nKeeping the admin interface in its own application means the public site has zero authentication overhead and a smaller attack surface, while the admin app enforces strict Auth.js v5 session checks at both the proxy and route levels.\n\n## Type-Safe Data Layer\n\nBoth applications generate their Prisma Client from the same schema, giving end-to-end TypeScript safety from PostgreSQL tables all the way to React components.",
+    published: true,
+    publishedAt: new Date("2026-10-30T00:00:00Z"),
+  },
+];
+
 async function main() {
   const email = (process.env.SEED_ADMIN_EMAIL ?? "admin@example.com").toLowerCase();
   const rawPassword = process.env.SEED_ADMIN_PASSWORD;
@@ -84,9 +97,17 @@ async function main() {
     await prisma.skill.upsert({ where: { name: skill.name }, update: skill, create: skill });
   }
 
+  for (const post of blogPosts) {
+    await prisma.blogPost.upsert({
+      where: { slug: post.slug },
+      update: post,
+      create: post,
+    });
+  }
+
   console.log(
     `Seeded: admin <${email}>${rawPassword ? "" : " (random password — set SEED_ADMIN_PASSWORD to choose one)"}, ` +
-      `${tags.length} tags, ${projects.length} projects, ${skills.length} skills`,
+      `${tags.length} tags, ${projects.length} projects, ${skills.length} skills, ${blogPosts.length} blog posts`,
   );
 }
 

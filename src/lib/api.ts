@@ -45,3 +45,4 @@ export function parseId(value: string | string[] | undefined): number | null {
   const n = Number(Array.isArray(value) ? value[0] : value);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
+
