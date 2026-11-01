@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Head from "next/head";
 import { useRouter } from "next/router";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { prisma } from "@/lib/prisma";
@@ -121,142 +122,166 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
   };
 
   return (
-    <div className="flex">
-      <AdminSidebar />
-      <main className="flex-1 p-8 bg-gray-50 min-h-screen">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Skills</h1>
-          <button
-            onClick={showForm ? closeForm : openCreate}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-          >
-            {showForm ? "Cancel" : "+ New Skill"}
-          </button>
-        </div>
+    <>
+      <Head>
+        <title>Skills – Portfolio Admin</title>
+      </Head>
 
-        {showForm && (
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="bg-white p-6 rounded-lg shadow mb-8 space-y-4"
-          >
-            <h2 className="text-xl font-semibold">
-              {editingId ? "Edit skill" : "New skill"}
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  {...register("name")}
-                  placeholder="TypeScript"
-                  className="w-full p-2 border rounded"
-                />
-                {errors.name && <p className="text-red-600 text-sm">{errors.name.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Category</label>
-                <input
-                  {...register("category")}
-                  placeholder="Frontend, Backend, Database, DevOps..."
-                  className="w-full p-2 border rounded"
-                />
-                {errors.category && (
-                  <p className="text-red-600 text-sm">{errors.category.message}</p>
-                )}
-              </div>
+      <div className="flex flex-col md:flex-row min-h-screen bg-slate-100">
+        <AdminSidebar />
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Skills &amp; Technologies</h1>
+              <p className="mt-1 text-sm text-slate-500">Manage technical stack proficiencies and categories.</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Proficiency Level (0–100)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  {...register("level")}
-                  className="w-full p-2 border rounded"
-                />
-                {errors.level && <p className="text-red-600 text-sm">{errors.level.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Icon (optional URL or class)
-                </label>
-                <input {...register("icon")} className="w-full p-2 border rounded" />
-                {errors.icon && <p className="text-red-600 text-sm">{errors.icon.message}</p>}
-              </div>
-            </div>
-
-            {serverError && (
-              <p role="alert" className="text-red-600 text-sm">
-                {serverError}
-              </p>
-            )}
-
             <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+              type="button"
+              onClick={showForm ? closeForm : openCreate}
+              className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md ${
+                showForm
+                  ? "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-indigo-500/25"
+              }`}
             >
-              {isSubmitting ? "Saving..." : editingId ? "Save Changes" : "Create Skill"}
+              {showForm ? "Cancel" : "+ New Skill"}
             </button>
-          </form>
-        )}
+          </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Category</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Proficiency</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {skills.map((skill) => (
-                <tr key={skill.id} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">{skill.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{skill.category}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-indigo-600 h-2 rounded-full"
-                          style={{ width: `${skill.level}%` }}
-                        />
-                      </div>
-                      <span className="text-sm text-gray-600">{skill.level}%</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 space-x-2">
-                    <button
-                      onClick={() => openEdit(skill)}
-                      className="text-indigo-600 hover:underline text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDelete(skill)}
-                      className="text-red-600 hover:underline text-sm"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {skills.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                    No skills yet. Add your first one!
-                  </td>
-                </tr>
+          {showForm && (
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/80 mb-8 space-y-5"
+            >
+              <h2 className="text-xl font-bold text-slate-900 pb-3 border-b border-slate-100">
+                {editingId ? "Edit Skill" : "Add New Skill"}
+              </h2>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Skill Name</label>
+                  <input
+                    {...register("name")}
+                    placeholder="TypeScript"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  {errors.name && <p className="text-rose-600 text-xs mt-1">{errors.name.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Category</label>
+                  <input
+                    {...register("category")}
+                    placeholder="Frontend, Backend, Database, Cloud..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  {errors.category && (
+                    <p className="text-rose-600 text-xs mt-1">{errors.category.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Proficiency Level (0–100%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    {...register("level")}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  {errors.level && <p className="text-rose-600 text-xs mt-1">{errors.level.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Icon (optional class or URL)
+                  </label>
+                  <input
+                    {...register("icon")}
+                    placeholder="e.g. devicon-typescript-plain"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  {errors.icon && <p className="text-rose-600 text-xs mt-1">{errors.icon.message}</p>}
+                </div>
+              </div>
+
+              {serverError && (
+                <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+                  {serverError}
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-      </main>
-    </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-500/20 disabled:opacity-50 transition-all"
+              >
+                {isSubmitting ? "Saving..." : editingId ? "Save Changes" : "Create Skill"}
+              </button>
+            </form>
+          )}
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Proficiency</th>
+                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {skills.map((skill) => (
+                    <tr key={skill.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-slate-900">{skill.name}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{skill.category}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-32 bg-slate-200 rounded-full h-2 overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full"
+                              style={{ width: `${skill.level}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-slate-600">{skill.level}%</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right space-x-3 text-sm">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(skill)}
+                          className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(skill)}
+                          className="font-semibold text-rose-600 hover:text-rose-800 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {skills.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                        No skills yet. Add your first one above!
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
 
