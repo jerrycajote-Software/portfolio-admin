@@ -259,3 +259,4 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
     </div>
   );
 }
+

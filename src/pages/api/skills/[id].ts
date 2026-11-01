@@ -22,3 +22,4 @@ export default adminApi({
     res.status(204).end();
   },
 });
+

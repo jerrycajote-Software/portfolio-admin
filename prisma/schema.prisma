@@ -11,7 +11,7 @@ datasource db {
   directUrl = env("DIRECT_URL")   // direct connection (prisma migrate)
 }
 
-// ─── Auth ────────────────────────────────────────────────────────────────────
+// Auth
 
 model User {
   id        Int      @id @default(autoincrement())
@@ -30,7 +30,7 @@ enum Role {
   ADMIN
 }
 
-// ─── Projects ────────────────────────────────────────────────────────────────
+// Projects
 
 model Project {
   id           Int      @id @default(autoincrement())
@@ -52,7 +52,7 @@ model Project {
   tags ProjectTag[]
 }
 
-// ─── Tags (many-to-many) ─────────────────────────────────────────────────────
+// Tags (many-to-many)
 
 model Tag {
   id       Int          @id @default(autoincrement())
@@ -69,7 +69,7 @@ model ProjectTag {
   @@id([projectId, tagId])
 }
 
-// ─── Skills ──────────────────────────────────────────────────────────────────
+// Skills
 
 model Skill {
   id       Int    @id @default(autoincrement())
@@ -79,7 +79,7 @@ model Skill {
   level    Int    @default(50) // proficiency 0-100
 }
 
-// ─── Contact Messages ────────────────────────────────────────────────────────
+// Contact Messages
 
 model ContactMessage {
   id        Int      @id @default(autoincrement())
@@ -90,7 +90,7 @@ model ContactMessage {
   createdAt DateTime @default(now())
 }
 
-// ─── Blog Posts (optional, for future use) ───────────────────────────────────
+// Blog Posts
 
 model BlogPost {
   id          Int      @id @default(autoincrement())

@@ -23,3 +23,4 @@ export default adminApi({
     res.status(201).json(post);
   },
 });
+
