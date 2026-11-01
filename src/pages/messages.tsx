@@ -1,10 +1,11 @@
-import { AdminSidebar } from "@/components/AdminSidebar";
-import { prisma } from "@/lib/prisma";
-import { withAdmin } from "@/lib/withAdmin";
+import Head from 'next/head';
+import { AdminSidebar } from '@/components/AdminSidebar';
+import { prisma } from '@/lib/prisma';
+import { withAdmin } from '@/lib/withAdmin';
 
 export const getServerSideProps = withAdmin(async () => {
   const messages = await prisma.contactMessage.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: 'desc' },
   });
 
   return {
@@ -14,70 +15,117 @@ export const getServerSideProps = withAdmin(async () => {
   };
 });
 
-export default function Messages({ messages }: any) {
+interface MessageItem {
+  id: number;
+  name: string;
+  email: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export default function Messages({ messages }: { messages: MessageItem[] }) {
   const toggleRead = async (id: number, read: boolean) => {
     await fetch(`/api/messages/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ read: !read }),
     });
     window.location.reload();
   };
 
   const deleteMessage = async (id: number) => {
-    if (!window.confirm("Delete this message? This cannot be undone.")) return;
-    await fetch(`/api/messages/${id}`, { method: "DELETE" });
+    if (!window.confirm('Delete this message? This cannot be undone.')) return;
+    await fetch(`/api/messages/${id}`, { method: 'DELETE' });
     window.location.reload();
   };
 
   return (
-    <div className="flex">
-      <AdminSidebar />
-      <main className="flex-1 p-8 bg-gray-50 min-h-screen">
-        <h1 className="text-3xl font-bold mb-8">Contact Messages</h1>
-        <div className="space-y-4">
-          {messages.map((msg: any) => (
-            <div
-              key={msg.id}
-              className={`bg-white p-6 rounded-lg shadow ${
-                !msg.read ? "border-l-4 border-indigo-500" : ""
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold text-lg">{msg.name}</h3>
-                  <p className="text-gray-500 text-sm">{msg.email}</p>
+    <>
+      <Head>
+        <title>Messages – Portfolio Admin</title>
+      </Head>
+
+      <div className="flex flex-col md:flex-row min-h-screen bg-slate-100">
+        <AdminSidebar />
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-6xl">
+          <div className="mb-8">
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              Contact Messages
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Manage client inquiries and messages sent via the portfolio contact form.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`bg-white p-6 rounded-2xl shadow-sm border transition-all ${
+                  !msg.read
+                    ? 'border-indigo-500 bg-indigo-50/20 shadow-md'
+                    : 'border-slate-200/80 hover:shadow-md'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-lg text-slate-900">{msg.name}</h3>
+                      {!msg.read && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-600 text-white">
+                          New
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-500 text-sm mt-0.5">{msg.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-slate-400 text-xs mr-2">
+                      {new Date(msg.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleRead(msg.id, msg.read)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                        msg.read
+                          ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                      }`}
+                    >
+                      {msg.read ? 'Mark Unread' : 'Mark as Read'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteMessage(msg.id)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400 text-sm">
-                    {new Date(msg.createdAt).toLocaleDateString()}
-                  </span>
-                  <button
-                    onClick={() => toggleRead(msg.id, msg.read)}
-                    className={`px-3 py-1 rounded text-xs font-medium ${
-                      msg.read
-                        ? "bg-gray-100 text-gray-600"
-                        : "bg-indigo-100 text-indigo-800"
-                    }`}
-                  >
-                    {msg.read ? "Mark Unread" : "Mark Read"}
-                  </button>
-                  <button
-                    onClick={() => deleteMessage(msg.id)}
-                    className="px-3 py-1 rounded text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100"
-                  >
-                    Delete
-                  </button>
-                </div>
+                <p className="mt-4 text-slate-700 text-sm leading-relaxed bg-slate-50/60 p-4 rounded-xl border border-slate-100 whitespace-pre-line">
+                  {msg.message}
+                </p>
               </div>
-              <p className="mt-3 text-gray-700">{msg.message}</p>
-            </div>
-          ))}
-          {messages.length === 0 && (
-            <p className="text-center text-gray-500 py-8">No messages yet.</p>
-          )}
-        </div>
-      </main>
-    </div>
+            ))}
+
+            {messages.length === 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-500">
+                <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <p className="font-semibold text-slate-600">No messages yet</p>
+                <p className="text-xs text-slate-400 mt-1">New submissions will show up here automatically.</p>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
