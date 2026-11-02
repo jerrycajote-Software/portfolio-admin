@@ -5,15 +5,26 @@ import { prisma } from '@/lib/prisma';
 import { withAdmin } from '@/lib/withAdmin';
 
 export const getServerSideProps = withAdmin(async () => {
-  const [projectCount, messageCount, skillCount, blogCount] = await Promise.all([
+  const [projectCount, messageCount, skillCount, blogCount, certificateCount, profile] = await Promise.all([
     prisma.project.count(),
     prisma.contactMessage.count({ where: { read: false } }),
     prisma.skill.count(),
     prisma.blogPost.count(),
+    prisma.certificate?.count ? prisma.certificate.count() : 0,
+    prisma.profile.findFirst({ orderBy: { id: 'asc' } }),
   ]);
 
   return {
-    props: { projectCount, messageCount, skillCount, blogCount },
+    props: {
+      projectCount,
+      messageCount,
+      skillCount,
+      blogCount,
+      certificateCount,
+      profileRole: profile?.role ?? 'Full Stack Developer',
+      profileLocation: profile?.location ?? 'Available Globally (Remote)',
+      profileAvailable: profile?.available ?? true,
+    },
   };
 });
 
@@ -22,6 +33,10 @@ interface DashboardProps {
   messageCount: number;
   skillCount: number;
   blogCount: number;
+  certificateCount: number;
+  profileRole: string;
+  profileLocation: string;
+  profileAvailable: boolean;
 }
 
 export default function Dashboard({
@@ -29,6 +44,10 @@ export default function Dashboard({
   messageCount,
   skillCount,
   blogCount,
+  certificateCount,
+  profileRole,
+  profileLocation,
+  profileAvailable,
 }: DashboardProps) {
   const stats = [
     {
@@ -40,6 +59,18 @@ export default function Dashboard({
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Certificates',
+      value: certificateCount,
+      href: '/certificates',
+      gradient: 'from-violet-500 to-purple-600',
+      badge: 'bg-purple-50 text-purple-700',
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5" />
         </svg>
       ),
     },
@@ -90,7 +121,7 @@ export default function Dashboard({
       <div className="flex flex-col md:flex-row min-h-screen bg-slate-100">
         <AdminSidebar />
 
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl">
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 w-full min-w-0">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -102,7 +133,7 @@ export default function Dashboard({
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {stats.map((stat) => (
               <Link
                 key={stat.label}
@@ -123,10 +154,65 @@ export default function Dashboard({
             ))}
           </div>
 
+          {/* Current Role & Work Location Overview Card */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-7 shadow-sm mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Public Role &amp; Work Location Status</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Currently displayed live on your portfolio homepage and about section
+                </p>
+              </div>
+              <Link
+                href="/profile"
+                className="self-start sm:self-auto px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl border border-indigo-200/80 transition-colors flex items-center gap-1.5"
+              >
+                <span>Edit Role &amp; Location</span>
+                <span>&rarr;</span>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                <p className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+                  Role
+                </p>
+                <p className="text-base font-bold text-slate-900 mt-1">
+                  {profileRole}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                <p className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+                  Work Location
+                </p>
+                <p className="text-base font-bold text-slate-900 mt-1">
+                  {profileLocation}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Quick Shortcuts Section */}
           <div className="rounded-2xl bg-white border border-slate-200/80 p-6 sm:p-8 shadow-sm">
             <h2 className="text-xl font-bold text-slate-900 mb-4">Quick Shortcuts</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+              <Link
+                href="/profile"
+                className="p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex items-center gap-3"
+              >
+                <div className="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  ✎
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900 text-sm">Role &amp; Location</p>
+                  <p className="text-xs text-slate-500">Edit profile info</p>
+                </div>
+              </Link>
+
               <Link
                 href="/projects"
                 className="p-4 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex items-center gap-3"
@@ -135,8 +221,21 @@ export default function Dashboard({
                   +
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900 text-sm">Add New Project</p>
-                  <p className="text-xs text-slate-500">Create or upload works</p>
+                  <p className="font-semibold text-slate-900 text-sm">Add Project</p>
+                  <p className="text-xs text-slate-500">Create or upload</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/certificates"
+                className="p-4 rounded-xl border border-slate-200 hover:border-purple-500 hover:bg-purple-50/30 transition-all flex items-center gap-3"
+              >
+                <div className="w-9 h-9 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  +
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900 text-sm">Add Certificate</p>
+                  <p className="text-xs text-slate-500">Add credentials</p>
                 </div>
               </Link>
 
@@ -148,8 +247,8 @@ export default function Dashboard({
                   +
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900 text-sm">Add New Skill</p>
-                  <p className="text-xs text-slate-500">Update stack proficiencies</p>
+                  <p className="font-semibold text-slate-900 text-sm">Add Skill</p>
+                  <p className="text-xs text-slate-500">Stack proficiencies</p>
                 </div>
               </Link>
 
@@ -161,8 +260,8 @@ export default function Dashboard({
                   +
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900 text-sm">Write Blog Post</p>
-                  <p className="text-xs text-slate-500">Publish fresh articles</p>
+                  <p className="font-semibold text-slate-900 text-sm">Write Post</p>
+                  <p className="text-xs text-slate-500">Publish articles</p>
                 </div>
               </Link>
 
@@ -174,8 +273,8 @@ export default function Dashboard({
                   ✉
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900 text-sm">View Inquiries</p>
-                  <p className="text-xs text-slate-500">Read contact messages</p>
+                  <p className="font-semibold text-slate-900 text-sm">Messages</p>
+                  <p className="text-xs text-slate-500">View inquiries</p>
                 </div>
               </Link>
             </div>

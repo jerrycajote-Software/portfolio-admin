@@ -48,7 +48,7 @@ export default function Messages({ messages }: { messages: MessageItem[] }) {
 
       <div className="flex flex-col md:flex-row min-h-screen bg-slate-100">
         <AdminSidebar />
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-6xl">
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 w-full min-w-0">
           <div className="mb-8">
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
               Contact Messages
