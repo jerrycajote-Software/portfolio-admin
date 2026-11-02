@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -42,6 +42,12 @@ export const getServerSideProps = withAdmin<{ skills: SkillRow[] }>(async () => 
 
 export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
   const router = useRouter();
+  const [skillList, setSkillList] = useState<SkillRow[]>(skills);
+
+  useEffect(() => {
+    setSkillList(skills);
+  }, [skills]);
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -112,13 +118,16 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
 
   const onDelete = async (s: SkillRow) => {
     if (!window.confirm(`Delete "${s.name}"? This cannot be undone.`)) return;
+
+    const previous = skillList;
+    setSkillList((prev) => prev.filter((item) => item.id !== s.id));
+    if (editingId === s.id) closeForm();
+
     const res = await fetch(`/api/skills/${s.id}`, { method: "DELETE" });
     if (!res.ok) {
+      setSkillList(previous);
       window.alert("Failed to delete the skill.");
-      return;
     }
-    if (editingId === s.id) closeForm();
-    refresh();
   };
 
   return (
@@ -235,7 +244,7 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {skills.map((skill) => (
+                  {skillList.map((skill) => (
                     <tr key={skill.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-6 py-4 font-semibold text-slate-900">{skill.name}</td>
                       <td className="px-6 py-4 text-sm text-slate-600">{skill.category}</td>
@@ -268,7 +277,7 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
                       </td>
                     </tr>
                   ))}
-                  {skills.length === 0 && (
+                  {skillList.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
                         No skills yet. Add your first one above!

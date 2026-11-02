@@ -14,8 +14,9 @@ const credentialsSchema = z.object({
 });
 
 // Compared against when the email doesn't exist, so response time doesn't
-// reveal which emails are registered.
-const DUMMY_HASH = bcrypt.hashSync("timing-safe-dummy-password", 12);
+// reveal which emails are registered. Pre-computed with cost 12 to avoid
+// blocking the Node.js event loop on module import.
+const DUMMY_HASH = "$2b$12$tZqtSI.qnuCH0v7lLeA8cOVNecUC0OeEYLDktfV/FEa42VFamzyHu";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,

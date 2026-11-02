@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { prisma } from '@/lib/prisma';
@@ -25,19 +26,50 @@ interface MessageItem {
 }
 
 export default function Messages({ messages }: { messages: MessageItem[] }) {
-  const toggleRead = async (id: number, read: boolean) => {
-    await fetch(`/api/messages/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ read: !read }),
-    });
-    window.location.reload();
+  const [messageList, setMessageList] = useState<MessageItem[]>(messages);
+
+  useEffect(() => {
+    setMessageList(messages);
+  }, [messages]);
+
+  const toggleRead = async (id: number, currentRead: boolean) => {
+    const nextRead = !currentRead;
+    setMessageList((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, read: nextRead } : m))
+    );
+
+    try {
+      const res = await fetch(`/api/messages/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ read: nextRead }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to update message status');
+      }
+    } catch {
+      setMessageList((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, read: currentRead } : m))
+      );
+      window.alert('Failed to update message status. Please try again.');
+    }
   };
 
   const deleteMessage = async (id: number) => {
     if (!window.confirm('Delete this message? This cannot be undone.')) return;
-    await fetch(`/api/messages/${id}`, { method: 'DELETE' });
-    window.location.reload();
+
+    const previous = messageList;
+    setMessageList((prev) => prev.filter((m) => m.id !== id));
+
+    try {
+      const res = await fetch(`/api/messages/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        throw new Error('Failed to delete message');
+      }
+    } catch {
+      setMessageList(previous);
+      window.alert('Failed to delete message. Please try again.');
+    }
   };
 
   return (
@@ -59,7 +91,7 @@ export default function Messages({ messages }: { messages: MessageItem[] }) {
           </div>
 
           <div className="space-y-4">
-            {messages.map((msg) => (
+            {messageList.map((msg) => (
               <div
                 key={msg.id}
                 className={`bg-white p-6 rounded-2xl shadow-sm border transition-all ${
@@ -114,7 +146,7 @@ export default function Messages({ messages }: { messages: MessageItem[] }) {
               </div>
             ))}
 
-            {messages.length === 0 && (
+            {messageList.length === 0 && (
               <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-500">
                 <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
