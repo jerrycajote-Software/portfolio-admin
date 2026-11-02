@@ -118,6 +118,12 @@ export default function AdminCertificates({
   needsRestart?: boolean;
 }) {
   const router = useRouter();
+  const [items, setItems] = useState<CertificateRow[]>(certificates);
+
+  useEffect(() => {
+    setItems(certificates);
+  }, [certificates]);
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -222,6 +228,10 @@ export default function AdminCertificates({
     field: "published" | "featured",
     currentVal: boolean
   ) => {
+    setItems((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, [field]: !currentVal } : c))
+    );
+
     const res = await fetch(`/api/certificates/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -229,23 +239,26 @@ export default function AdminCertificates({
     });
 
     if (!res.ok) {
+      setItems((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, [field]: currentVal } : c))
+      );
       window.alert(`Failed to update ${field} status.`);
-      return;
     }
-    refresh();
   };
 
   const onDelete = async (c: CertificateRow) => {
     if (!window.confirm(`Delete certificate "${c.title}"? This cannot be undone.`)) {
       return;
     }
+    const previous = items;
+    setItems((prev) => prev.filter((item) => item.id !== c.id));
+    if (editingId === c.id) closeForm();
+
     const res = await fetch(`/api/certificates/${c.id}`, { method: "DELETE" });
     if (!res.ok) {
+      setItems(previous);
       window.alert("Failed to delete certificate.");
-      return;
     }
-    if (editingId === c.id) closeForm();
-    refresh();
   };
 
   const formatDateDisplay = (isoStr: string | null) => {
@@ -509,7 +522,7 @@ export default function AdminCertificates({
           )}
 
           {/* Certificate Items List */}
-          {certificates.length === 0 ? (
+          {items.length === 0 ? (
             <div className="p-12 text-center rounded-2xl bg-white border border-slate-200/80 shadow-sm">
               <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -536,7 +549,7 @@ export default function AdminCertificates({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {certificates.map((c) => (
+                    {items.map((c) => (
                       <tr key={c.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-3.5">

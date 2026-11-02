@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -72,6 +72,12 @@ export const getServerSideProps = withAdmin<{ posts: BlogPostRow[] }>(async () =
 
 export default function AdminBlog({ posts }: { posts: BlogPostRow[] }) {
   const router = useRouter();
+  const [postList, setPostList] = useState<BlogPostRow[]>(posts);
+
+  useEffect(() => {
+    setPostList(posts);
+  }, [posts]);
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -144,13 +150,16 @@ export default function AdminBlog({ posts }: { posts: BlogPostRow[] }) {
 
   const onDelete = async (p: BlogPostRow) => {
     if (!window.confirm(`Delete "${p.title}"? This cannot be undone.`)) return;
+
+    const previous = postList;
+    setPostList((prev) => prev.filter((item) => item.id !== p.id));
+    if (editingId === p.id) closeForm();
+
     const res = await fetch(`/api/blog/${p.id}`, { method: "DELETE" });
     if (!res.ok) {
+      setPostList(previous);
       window.alert("Failed to delete the blog post.");
-      return;
     }
-    if (editingId === p.id) closeForm();
-    refresh();
   };
 
   return (
@@ -285,7 +294,7 @@ export default function AdminBlog({ posts }: { posts: BlogPostRow[] }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {posts.map((post) => (
+                  {postList.map((post) => (
                     <tr key={post.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-6 py-4 font-semibold text-slate-900">{post.title}</td>
                       <td className="px-6 py-4 text-sm text-slate-500">{post.slug}</td>
@@ -327,7 +336,7 @@ export default function AdminBlog({ posts }: { posts: BlogPostRow[] }) {
                       </td>
                     </tr>
                   ))}
-                  {posts.length === 0 && (
+                  {postList.length === 0 && (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
                         No blog posts yet. Write your first one above!

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -77,6 +77,12 @@ export const getServerSideProps = withAdmin<{ projects: ProjectRow[] }>(async ()
 
 export default function AdminProjects({ projects }: { projects: ProjectRow[] }) {
   const router = useRouter();
+  const [projectList, setProjectList] = useState<ProjectRow[]>(projects);
+
+  useEffect(() => {
+    setProjectList(projects);
+  }, [projects]);
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -173,13 +179,16 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
 
   const onDelete = async (p: ProjectRow) => {
     if (!window.confirm(`Delete "${p.title}"? This cannot be undone.`)) return;
+
+    const previous = projectList;
+    setProjectList((prev) => prev.filter((item) => item.id !== p.id));
+    if (editingId === p.id) closeForm();
+
     const res = await fetch(`/api/projects/${p.id}`, { method: "DELETE" });
     if (!res.ok) {
+      setProjectList(previous);
       window.alert("Failed to delete the project.");
-      return;
     }
-    if (editingId === p.id) closeForm();
-    refresh();
   };
 
   return (
@@ -351,7 +360,7 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {projects.map((project) => (
+                  {projectList.map((project) => (
                     <tr key={project.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-6 py-4 font-semibold text-slate-900">{project.title}</td>
                       <td className="px-6 py-4 text-sm text-slate-500">{project.slug}</td>
@@ -407,7 +416,7 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
                       </td>
                     </tr>
                   ))}
-                  {projects.length === 0 && (
+                  {projectList.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                         No projects yet. Create your first one above!
