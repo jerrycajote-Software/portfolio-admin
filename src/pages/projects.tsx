@@ -2,6 +2,7 @@ import { useState } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { DemoVideosManager, type DemoVideo } from "@/components/DemoVideosManager";
 import { prisma } from "@/lib/prisma";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -47,6 +48,7 @@ interface ProjectRow {
   thumbnailUrl: string | null;
   repoUrl: string | null;
   liveUrl: string | null;
+  demoVideos: string | null;
   featured: boolean;
   published: boolean;
   tags: { tag: { id: number; name: string } }[];
@@ -63,6 +65,7 @@ export const getServerSideProps = withAdmin<{ projects: ProjectRow[] }>(async ()
       thumbnailUrl: true,
       repoUrl: true,
       liveUrl: true,
+      demoVideos: true,
       featured: true,
       published: true,
       tags: { select: { tag: { select: { id: true, name: true } } } },
@@ -77,6 +80,7 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [demoVideos, setDemoVideos] = useState<DemoVideo[]>([]);
 
   const {
     register,
@@ -94,12 +98,14 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
     setShowForm(false);
     setEditingId(null);
     setServerError(null);
+    setDemoVideos([]);
     reset(EMPTY_FORM);
   };
 
   const openCreate = () => {
     setEditingId(null);
     setServerError(null);
+    setDemoVideos([]);
     reset(EMPTY_FORM);
     setShowForm(true);
   };
@@ -107,6 +113,14 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
   const openEdit = (p: ProjectRow) => {
     setEditingId(p.id);
     setServerError(null);
+    let loadedVideos: DemoVideo[] = [];
+    if (p.demoVideos) {
+      try {
+        loadedVideos = JSON.parse(p.demoVideos);
+      } catch {}
+    }
+    setDemoVideos(loadedVideos);
+
     reset({
       title: p.title,
       slug: p.slug,
@@ -129,10 +143,16 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const payload = {
+      ...data,
+      tags,
+      demoVideos: demoVideos.length > 0 ? JSON.stringify(demoVideos) : null,
+    };
+
     const res = await fetch(editingId ? `/api/projects/${editingId}` : "/api/projects", {
       method: editingId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, tags }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -170,7 +190,7 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
 
       <div className="flex flex-col md:flex-row min-h-screen bg-slate-100">
         <AdminSidebar />
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl">
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 w-full min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Projects</h1>
@@ -296,6 +316,11 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
                 </label>
               </div>
 
+              {/* Demo Videos Showcase Manager */}
+              <div className="pt-2 border-t border-slate-100">
+                <DemoVideosManager videos={demoVideos} onChange={setDemoVideos} />
+              </div>
+
               {serverError && (
                 <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
                   {serverError}
@@ -319,6 +344,7 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
                   <tr>
                     <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Title</th>
                     <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Slug</th>
+                    <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Videos</th>
                     <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider">Featured</th>
                     <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-right">Actions</th>
@@ -329,6 +355,26 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
                     <tr key={project.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-6 py-4 font-semibold text-slate-900">{project.title}</td>
                       <td className="px-6 py-4 text-sm text-slate-500">{project.slug}</td>
+                      <td className="px-6 py-4 text-sm">
+                        {project.demoVideos ? (
+                          (() => {
+                            try {
+                              const count = (JSON.parse(project.demoVideos) as unknown[]).length;
+                              return count > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                  🎬 {count} {count === 1 ? "video" : "videos"}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              );
+                            } catch {
+                              return <span className="text-slate-400">—</span>;
+                            }
+                          })()
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -363,7 +409,7 @@ export default function AdminProjects({ projects }: { projects: ProjectRow[] }) 
                   ))}
                   {projects.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                      <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                         No projects yet. Create your first one above!
                       </td>
                     </tr>

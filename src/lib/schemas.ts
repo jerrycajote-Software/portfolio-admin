@@ -4,9 +4,12 @@ import { z } from "zod";
 const optionalUrl = z
   .string()
   .trim()
-  .url("Must be a valid URL")
   .optional()
+  .nullable()
   .or(z.literal(""))
+  .refine((v) => !v || /^https?:\/\//i.test(v), {
+    message: "Must be a valid URL starting with http:// or https://",
+  })
   .transform((v) => (v ? v : null));
 
 export const projectInputSchema = z.object({
@@ -22,6 +25,14 @@ export const projectInputSchema = z.object({
   thumbnailUrl: optionalUrl,
   repoUrl: optionalUrl,
   liveUrl: optionalUrl,
+  demoVideos: z
+    .string()
+    .trim()
+    .max(50000)
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null)),
   featured: z.boolean().default(false),
   published: z.boolean().default(false),
   // Tag names; created on demand
@@ -69,7 +80,82 @@ export const blogPostInputSchema = z.object({
 
 export const blogPostUpdateSchema = blogPostInputSchema.partial();
 
+const optionalUrlOrPath = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .or(z.literal(""))
+  .refine(
+    (v) => !v || v.startsWith("/") || /^https?:\/\//i.test(v),
+    { message: "Must be a valid URL or path (e.g. /image.png or https://...)" }
+  )
+  .transform((v) => (v ? v : null));
+
+export const certificateInputSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(200),
+  issuer: z.string().trim().min(1, "Issuer is required").max(100),
+  issuedDate: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? new Date(v) : null)),
+  credentialId: z
+    .string()
+    .trim()
+    .max(150)
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null)),
+  verificationUrl: optionalUrl,
+  imageUrl: optionalUrlOrPath,
+  pdfUrl: optionalUrlOrPath,
+  blurData: z
+    .string()
+    .trim()
+    .max(25000)
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null)),
+  description: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null)),
+  featured: z.boolean().default(false),
+  published: z.boolean().default(true),
+});
+
+export const certificateUpdateSchema = certificateInputSchema.partial();
+
+export const profileInputSchema = z.object({
+  fullName: z.string().trim().min(1, "Full Name is required").max(100),
+  role: z.string().trim().min(1, "Role is required").max(100),
+  location: z.string().trim().min(1, "Work Location is required").max(150),
+  bio: z
+    .string()
+    .trim()
+    .max(5000)
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => (v ? v : null)),
+  available: z.boolean().default(true),
+});
+
+export const profileUpdateSchema = profileInputSchema.partial();
+
 export type ProjectInput = z.input<typeof projectInputSchema>;
 export type SkillInput = z.input<typeof skillInputSchema>;
 export type BlogPostInput = z.input<typeof blogPostInputSchema>;
+export type CertificateInput = z.input<typeof certificateInputSchema>;
+export type ProfileInput = z.input<typeof profileInputSchema>;
+
 

@@ -66,6 +66,43 @@ const blogPosts = [
   },
 ];
 
+const certificates = [
+  {
+    title: "AWS Certified Cloud Practitioner",
+    issuer: "Amazon Web Services",
+    issuedDate: new Date("2026-05-15"),
+    credentialId: "AWS-CCP-2026-89104",
+    verificationUrl: "https://aws.amazon.com/verification",
+    imageUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80",
+    blurData: JSON.stringify({ x: 64, y: 76, width: 30, height: 18, blurIntensity: 14, showWatermark: true }),
+    description: "Cloud concepts, AWS security and compliance, core services, and billing practices.",
+    featured: true,
+    published: true,
+  },
+  {
+    title: "Meta Front-End Developer Professional Certificate",
+    issuer: "Meta",
+    issuedDate: new Date("2026-03-20"),
+    credentialId: "META-FED-772910",
+    verificationUrl: "https://coursera.org/verify/professional-cert/meta-front-end",
+    imageUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=80",
+    description: "Comprehensive front-end engineering program covering React, modern JavaScript, UI/UX, and testing.",
+    featured: true,
+    published: true,
+  },
+  {
+    title: "PostgreSQL Advanced Queries & Performance Optimization",
+    issuer: "Database Engineering Institute",
+    issuedDate: new Date("2026-01-10"),
+    credentialId: "PG-OPT-3392",
+    verificationUrl: "https://example.com/verify/pg-opt",
+    imageUrl: "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=800&auto=format&fit=crop&q=80",
+    description: "Indexing strategies, query execution planner analysis, and high-concurrency database architecture.",
+    featured: false,
+    published: true,
+  },
+];
+
 async function main() {
   const email = (process.env.SEED_ADMIN_EMAIL ?? "admin@example.com").toLowerCase();
   const rawPassword = process.env.SEED_ADMIN_PASSWORD;
@@ -105,9 +142,25 @@ async function main() {
     });
   }
 
+  for (const cert of certificates) {
+    const existing = await prisma.certificate.findFirst({
+      where: { title: cert.title, issuer: cert.issuer },
+    });
+    if (existing) {
+      await prisma.certificate.update({
+        where: { id: existing.id },
+        data: cert,
+      });
+    } else {
+      await prisma.certificate.create({
+        data: cert,
+      });
+    }
+  }
+
   console.log(
     `Seeded: admin <${email}>${rawPassword ? "" : " (random password — set SEED_ADMIN_PASSWORD to choose one)"}, ` +
-      `${tags.length} tags, ${projects.length} projects, ${skills.length} skills, ${blogPosts.length} blog posts`,
+      `${tags.length} tags, ${projects.length} projects, ${skills.length} skills, ${blogPosts.length} blog posts, ${certificates.length} certificates`,
   );
 }
 
