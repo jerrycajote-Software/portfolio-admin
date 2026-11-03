@@ -8,6 +8,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { withAdmin } from "@/lib/withAdmin";
+import { getCached } from "@/lib/cache";
+
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
@@ -84,28 +86,30 @@ export const getServerSideProps = withAdmin<{
     };
   }
 
-  const rawCertificates = await prisma.certificate.findMany({
-    orderBy: [{ issuedDate: "desc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      title: true,
-      issuer: true,
-      issuedDate: true,
-      credentialId: true,
-      verificationUrl: true,
-      imageUrl: true,
-      pdfUrl: true,
-      blurData: true,
-      description: true,
-      featured: true,
-      published: true,
-    },
-  });
+  const certificates = await getCached("certificates:list", 30, async () => {
+    const rawCertificates = await prisma.certificate.findMany({
+      orderBy: [{ issuedDate: "desc" }, { createdAt: "desc" }],
+      select: {
+        id: true,
+        title: true,
+        issuer: true,
+        issuedDate: true,
+        credentialId: true,
+        verificationUrl: true,
+        imageUrl: true,
+        pdfUrl: true,
+        blurData: true,
+        description: true,
+        featured: true,
+        published: true,
+      },
+    });
 
-  const certificates: CertificateRow[] = rawCertificates.map((c) => ({
-    ...c,
-    issuedDate: c.issuedDate ? c.issuedDate.toISOString() : null,
-  }));
+    return rawCertificates.map((c) => ({
+      ...c,
+      issuedDate: c.issuedDate ? c.issuedDate.toISOString() : null,
+    }));
+  });
 
   return { props: { certificates, needsRestart: false } };
 });

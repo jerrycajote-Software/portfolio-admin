@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi } from "@/lib/api";
 import { blogPostInputSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async GET(_req, res) {
@@ -20,6 +21,8 @@ export default adminApi({
         publishedAt: data.published ? new Date() : null,
       },
     });
+    invalidateCache("blog");
+    invalidateCache("dashboard");
     res.status(201).json(post);
   },
 });

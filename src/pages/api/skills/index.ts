@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi } from "@/lib/api";
 import { skillInputSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async GET(_req, res) {
@@ -15,6 +16,8 @@ export default adminApi({
   async POST(req, res) {
     const data = skillInputSchema.parse(req.body);
     const skill = await prisma.skill.create({ data });
+    invalidateCache("skills");
+    invalidateCache("dashboard");
     res.status(201).json(skill);
   },
 });

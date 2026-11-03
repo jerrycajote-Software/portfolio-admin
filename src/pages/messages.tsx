@@ -3,15 +3,19 @@ import Head from 'next/head';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { prisma } from '@/lib/prisma';
 import { withAdmin } from '@/lib/withAdmin';
+import { getCached } from '@/lib/cache';
 
 export const getServerSideProps = withAdmin(async () => {
-  const messages = await prisma.contactMessage.findMany({
-    orderBy: { createdAt: 'desc' },
+  const messages = await getCached('messages:list', 15, async () => {
+    const raw = await prisma.contactMessage.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return JSON.parse(JSON.stringify(raw));
   });
 
   return {
     props: {
-      messages: JSON.parse(JSON.stringify(messages)),
+      messages,
     },
   };
 });

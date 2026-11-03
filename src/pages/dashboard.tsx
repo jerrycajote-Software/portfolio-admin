@@ -3,19 +3,20 @@ import Link from 'next/link';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { prisma } from '@/lib/prisma';
 import { withAdmin } from '@/lib/withAdmin';
+import { getCached } from '@/lib/cache';
 
 export const getServerSideProps = withAdmin(async () => {
-  const [projectCount, messageCount, skillCount, blogCount, certificateCount, profile] = await Promise.all([
-    prisma.project.count(),
-    prisma.contactMessage.count({ where: { read: false } }),
-    prisma.skill.count(),
-    prisma.blogPost.count(),
-    prisma.certificate?.count ? prisma.certificate.count() : 0,
-    prisma.profile.findFirst({ orderBy: { id: 'asc' } }),
-  ]);
+  const stats = await getCached('dashboard:stats', 30, async () => {
+    const [projectCount, messageCount, skillCount, blogCount, certificateCount, profile] = await Promise.all([
+      prisma.project.count(),
+      prisma.contactMessage.count({ where: { read: false } }),
+      prisma.skill.count(),
+      prisma.blogPost.count(),
+      prisma.certificate?.count ? prisma.certificate.count() : 0,
+      prisma.profile.findFirst({ orderBy: { id: 'asc' } }),
+    ]);
 
-  return {
-    props: {
+    return {
       projectCount,
       messageCount,
       skillCount,
@@ -24,8 +25,10 @@ export const getServerSideProps = withAdmin(async () => {
       profileRole: profile?.role ?? 'Full Stack Developer',
       profileLocation: profile?.location ?? 'Available Globally (Remote)',
       profileAvailable: profile?.available ?? true,
-    },
-  };
+    };
+  });
+
+  return { props: stats };
 });
 
 interface DashboardProps {

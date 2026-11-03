@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { withAdmin } from "@/lib/withAdmin";
+import { getCached } from "@/lib/cache";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(80),
@@ -33,10 +34,12 @@ interface SkillRow {
 }
 
 export const getServerSideProps = withAdmin<{ skills: SkillRow[] }>(async () => {
-  const skills = await prisma.skill.findMany({
-    orderBy: [{ category: "asc" }, { level: "desc" }, { name: "asc" }],
-    select: { id: true, name: true, category: true, icon: true, level: true },
-  });
+  const skills = await getCached("skills:list", 30, () =>
+    prisma.skill.findMany({
+      orderBy: [{ category: "asc" }, { level: "desc" }, { name: "asc" }],
+      select: { id: true, name: true, category: true, icon: true, level: true },
+    })
+  );
   return { props: { skills } };
 });
 

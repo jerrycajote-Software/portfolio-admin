@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { withAdmin } from "@/lib/withAdmin";
+import { getCached } from "@/lib/cache";
 
 // Client-side form schema (the API re-validates everything on the server).
 const formSchema = z.object({
@@ -55,22 +56,24 @@ interface ProjectRow {
 }
 
 export const getServerSideProps = withAdmin<{ projects: ProjectRow[] }>(async () => {
-  const projects = await prisma.project.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      description: true,
-      thumbnailUrl: true,
-      repoUrl: true,
-      liveUrl: true,
-      demoVideos: true,
-      featured: true,
-      published: true,
-      tags: { select: { tag: { select: { id: true, name: true } } } },
-    },
-  });
+  const projects = await getCached("projects:list", 30, () =>
+    prisma.project.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        description: true,
+        thumbnailUrl: true,
+        repoUrl: true,
+        liveUrl: true,
+        demoVideos: true,
+        featured: true,
+        published: true,
+        tags: { select: { tag: { select: { id: true, name: true } } } },
+      },
+    })
+  );
 
   return { props: { projects } };
 });

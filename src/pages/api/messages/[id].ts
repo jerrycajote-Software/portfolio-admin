@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi, parseId } from "@/lib/api";
 import { messageUpdateSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async PATCH(req, res) {
@@ -11,6 +12,8 @@ export default adminApi({
 
     const { read } = messageUpdateSchema.parse(req.body);
     const message = await prisma.contactMessage.update({ where: { id }, data: { read } });
+    invalidateCache("messages");
+    invalidateCache("dashboard");
     res.status(200).json(message);
   },
 
@@ -19,6 +22,8 @@ export default adminApi({
     if (!id) return res.status(400).json({ error: "Invalid id" });
 
     await prisma.contactMessage.delete({ where: { id } });
+    invalidateCache("messages");
+    invalidateCache("dashboard");
     res.status(204).end();
   },
 });

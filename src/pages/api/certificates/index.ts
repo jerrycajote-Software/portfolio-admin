@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi } from "@/lib/api";
 import { certificateInputSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async GET(_req, res) {
@@ -25,6 +26,8 @@ export default adminApi({
     }
     const data = certificateInputSchema.parse(req.body);
     const certificate = await prisma.certificate.create({ data });
+    invalidateCache("certificates");
+    invalidateCache("dashboard");
     res.status(201).json(certificate);
   },
 });

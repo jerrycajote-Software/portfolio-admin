@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { withAdmin } from "@/lib/withAdmin";
+import { getCached } from "@/lib/cache";
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
@@ -46,26 +47,28 @@ interface BlogPostRow {
 }
 
 export const getServerSideProps = withAdmin<{ posts: BlogPostRow[] }>(async () => {
-  const rows = await prisma.blogPost.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      excerpt: true,
-      content: true,
-      coverImage: true,
-      published: true,
-      publishedAt: true,
-      createdAt: true,
-    },
-  });
+  const posts = await getCached("blog:list", 30, async () => {
+    const rows = await prisma.blogPost.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        content: true,
+        coverImage: true,
+        published: true,
+        publishedAt: true,
+        createdAt: true,
+      },
+    });
 
-  const posts: BlogPostRow[] = rows.map((r) => ({
-    ...r,
-    publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
-    createdAt: r.createdAt.toISOString(),
-  }));
+    return rows.map((r) => ({
+      ...r,
+      publishedAt: r.publishedAt ? r.publishedAt.toISOString() : null,
+      createdAt: r.createdAt.toISOString(),
+    }));
+  });
 
   return { props: { posts } };
 });

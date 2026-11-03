@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi, parseId } from "@/lib/api";
 import { certificateUpdateSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async PATCH(req, res) {
@@ -16,6 +17,8 @@ export default adminApi({
 
     const data = certificateUpdateSchema.parse(req.body);
     const certificate = await prisma.certificate.update({ where: { id }, data });
+    invalidateCache("certificates");
+    invalidateCache("dashboard");
     res.status(200).json(certificate);
   },
 
@@ -29,6 +32,8 @@ export default adminApi({
     if (!id) return res.status(400).json({ error: "Invalid id" });
 
     await prisma.certificate.delete({ where: { id } });
+    invalidateCache("certificates");
+    invalidateCache("dashboard");
     res.status(204).end();
   },
 });
