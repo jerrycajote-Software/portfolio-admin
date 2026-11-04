@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi, parseId } from "@/lib/api";
 import { blogPostUpdateSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async PATCH(req, res) {
@@ -31,6 +32,8 @@ export default adminApi({
       where: { id },
       data: { ...data, ...publishedAtPatch },
     });
+    invalidateCache("blog");
+    invalidateCache("dashboard");
     res.status(200).json(post);
   },
 
@@ -39,6 +42,8 @@ export default adminApi({
     if (!id) return res.status(400).json({ error: "Invalid id" });
 
     await prisma.blogPost.delete({ where: { id } });
+    invalidateCache("blog");
+    invalidateCache("dashboard");
     res.status(204).end();
   },
 });

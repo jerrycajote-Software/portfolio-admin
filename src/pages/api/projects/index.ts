@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi } from "@/lib/api";
 import { projectInputSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async GET(_req, res) {
@@ -28,6 +29,8 @@ export default adminApi({
       },
       include: { tags: { include: { tag: true } } },
     });
+    invalidateCache("projects");
+    invalidateCache("dashboard");
     res.status(201).json(project);
   },
 });

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { AdminSidebar } from '@/components/AdminSidebar';
 import { prisma } from '@/lib/prisma';
 import { withAdmin } from '@/lib/withAdmin';
+import { getCached } from '@/lib/cache';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,32 +28,36 @@ export interface ProfileData {
 }
 
 export const getServerSideProps = withAdmin<{ profile: ProfileData }>(async () => {
-  let profile = await prisma.profile.findFirst({
-    orderBy: { id: 'asc' },
-  });
-
-  if (!profile) {
-    profile = await prisma.profile.create({
-      data: {
-        fullName: 'Jerry Cajote',
-        role: 'Full Stack Developer',
-        location: 'Available Globally (Remote)',
-        bio: 'I build robust, high-performance web applications from database schemas to polished, responsive, and animated user experiences.',
-        available: true,
-      },
+  const profile = await getCached('profile:data', 30, async () => {
+    let row = await prisma.profile.findFirst({
+      orderBy: { id: 'asc' },
     });
-  }
+
+    if (!row) {
+      row = await prisma.profile.create({
+        data: {
+          fullName: 'Jerry Cajote',
+          role: 'Full Stack Developer',
+          location: 'Available Globally (Remote)',
+          bio: 'I build robust, high-performance web applications from database schemas to polished, responsive, and animated user experiences.',
+          available: true,
+        },
+      });
+    }
+
+    return {
+      id: row.id,
+      fullName: row.fullName,
+      role: row.role,
+      location: row.location,
+      bio: row.bio,
+      available: row.available,
+    };
+  });
 
   return {
     props: {
-      profile: {
-        id: profile.id,
-        fullName: profile.fullName,
-        role: profile.role,
-        location: profile.location,
-        bio: profile.bio,
-        available: profile.available,
-      },
+      profile,
     },
   };
 });

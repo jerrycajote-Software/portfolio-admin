@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi } from "@/lib/api";
 import { profileUpdateSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async GET(_req, res) {
@@ -50,6 +51,8 @@ export default adminApi({
       });
     }
 
+    invalidateCache("profile");
+    invalidateCache("dashboard");
     res.status(200).json(updated);
   },
 });

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { adminApi, parseId } from "@/lib/api";
 import { projectUpdateSchema } from "@/lib/schemas";
+import { invalidateCache } from "@/lib/cache";
 
 export default adminApi({
   async PATCH(req, res) {
@@ -27,6 +28,8 @@ export default adminApi({
       },
       include: { tags: { include: { tag: true } } },
     });
+    invalidateCache("projects");
+    invalidateCache("dashboard");
     res.status(200).json(project);
   },
 
@@ -35,6 +38,8 @@ export default adminApi({
     if (!id) return res.status(400).json({ error: "Invalid id" });
 
     await prisma.project.delete({ where: { id } }); // ProjectTag rows cascade
+    invalidateCache("projects");
+    invalidateCache("dashboard");
     res.status(204).end();
   },
 });
