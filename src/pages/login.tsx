@@ -42,8 +42,12 @@ export default function Login() {
       <main className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
         <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-xl border border-slate-200/80">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/25 mb-4">
-              JC
+            <div className="w-14 h-14 mx-auto rounded-2xl overflow-hidden border border-slate-200 shadow-lg shadow-indigo-500/15 mb-4 bg-slate-100">
+              <img
+                src="/profile.jpg"
+                alt="Jerry Cajote"
+                className="w-full h-full object-cover object-[center_15%]"
+              />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Portfolio Admin

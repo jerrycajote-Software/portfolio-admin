@@ -77,9 +77,13 @@ export function AdminSidebar() {
     <>
       {/* Mobile top bar with hamburger */}
       <div className="md:hidden flex items-center justify-between p-4 bg-slate-900 text-white shadow-md">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shadow">
-            JC
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-700/80 shadow shrink-0 bg-slate-800">
+            <img
+              src="/profile.jpg"
+              alt="Jerry Cajote"
+              className="w-full h-full object-cover object-[center_15%]"
+            />
           </div>
           <span className="font-bold text-base tracking-tight">Portfolio Admin</span>
         </Link>
@@ -116,8 +120,12 @@ export function AdminSidebar() {
         <div>
           {/* Brand header */}
           <div className="flex items-center gap-3 pb-6 mb-6 border-b border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-bold text-white text-base shadow-lg shadow-indigo-500/25">
-              JC
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-slate-700/80 shadow-lg shrink-0 bg-slate-800">
+              <img
+                src="/profile.jpg"
+                alt="Jerry Cajote"
+                className="w-full h-full object-cover object-[center_15%]"
+              />
             </div>
             <div>
               <Link href="/dashboard" className="font-extrabold text-lg text-white tracking-tight hover:text-indigo-400 transition-colors">

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { TechIcon } from "@/components/TechIcon";
 import { prisma } from "@/lib/prisma";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,6 +18,16 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const DEFAULT_CATEGORIES = [
+  "Frontend",
+  "Backend",
+  "Database",
+  "DevOps",
+  "Cloud",
+  "Mobile",
+  "Tools",
+];
 
 const EMPTY_FORM: FormData = {
   name: "",
@@ -54,16 +65,26 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+
+  const categoryOptions = Array.from(
+    new Set([...DEFAULT_CATEGORIES, ...skillList.map((s) => s.category).filter(Boolean)])
+  );
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: EMPTY_FORM,
   });
+
+  const watchedName = watch("name");
+  const watchedIcon = watch("icon");
 
   const refresh = () => router.replace(router.asPath);
 
@@ -71,12 +92,14 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
     setShowForm(false);
     setEditingId(null);
     setServerError(null);
+    setIsCustomCategory(false);
     reset(EMPTY_FORM);
   };
 
   const openCreate = () => {
     setEditingId(null);
     setServerError(null);
+    setIsCustomCategory(false);
     reset(EMPTY_FORM);
     setShowForm(true);
   };
@@ -84,6 +107,7 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
   const openEdit = (s: SkillRow) => {
     setEditingId(s.id);
     setServerError(null);
+    setIsCustomCategory(false);
     reset({
       name: s.name,
       category: s.category,
@@ -181,11 +205,46 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Category</label>
-                  <input
-                    {...register("category")}
-                    placeholder="Frontend, Backend, Database, Cloud..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  />
+                  {!isCustomCategory ? (
+                    <select
+                      {...register("category")}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setIsCustomCategory(true);
+                          setValue("category", "", { shouldValidate: false });
+                        } else {
+                          setValue("category", e.target.value, { shouldValidate: true });
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
+                    >
+                      {categoryOptions.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                      <option value="__custom__">+ Custom Category...</option>
+                    </select>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <input
+                        {...register("category")}
+                        placeholder="Type custom category name..."
+                        autoFocus
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomCategory(false);
+                          setValue("category", "Frontend", { shouldValidate: true });
+                        }}
+                        className="px-3.5 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300/80 rounded-xl shrink-0 transition-colors"
+                      >
+                        Choose from list
+                      </button>
+                    </div>
+                  )}
                   {errors.category && (
                     <p className="text-rose-600 text-xs mt-1">{errors.category.message}</p>
                   )}
@@ -208,13 +267,18 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Icon (optional class or URL)
+                    Icon (key or URL)
                   </label>
-                  <input
-                    {...register("icon")}
-                    placeholder="e.g. devicon-typescript-plain"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                  />
+                  <div className="flex items-center gap-3">
+                    <input
+                      {...register("icon")}
+                      placeholder="e.g. nodejs, postgresql, prisma, git, react..."
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50/50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    />
+                    <div className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0 shadow-sm" title="Icon preview">
+                      <TechIcon name={watchedName || ""} icon={watchedIcon} className="w-6 h-6" />
+                    </div>
+                  </div>
                   {errors.icon && <p className="text-rose-600 text-xs mt-1">{errors.icon.message}</p>}
                 </div>
               </div>
@@ -249,7 +313,14 @@ export default function AdminSkills({ skills }: { skills: SkillRow[] }) {
                 <tbody className="divide-y divide-slate-100">
                   {skillList.map((skill) => (
                     <tr key={skill.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-6 py-4 font-semibold text-slate-900">{skill.name}</td>
+                      <td className="px-6 py-4 font-semibold text-slate-900">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 flex items-center justify-center shrink-0">
+                            <TechIcon name={skill.name} icon={skill.icon} className="w-5 h-5" />
+                          </span>
+                          <span>{skill.name}</span>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-sm text-slate-600">{skill.category}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">

@@ -43,14 +43,14 @@ const projects = [
 ];
 
 const skills = [
-  { name: "TypeScript", category: "Frontend", level: 80 },
-  { name: "React", category: "Frontend", level: 80 },
-  { name: "Next.js", category: "Frontend", level: 75 },
-  { name: "Tailwind CSS", category: "Frontend", level: 75 },
-  { name: "Node.js", category: "Backend", level: 70 },
-  { name: "Prisma", category: "Database", level: 65 },
-  { name: "PostgreSQL", category: "Database", level: 65 },
-  { name: "Git", category: "DevOps", level: 75 },
+  { name: "TypeScript", category: "Frontend", level: 80, icon: "typescript" },
+  { name: "React", category: "Frontend", level: 80, icon: "react" },
+  { name: "Next.js", category: "Frontend", level: 75, icon: "nextjs" },
+  { name: "Tailwind CSS", category: "Frontend", level: 75, icon: "tailwindcss" },
+  { name: "Node.js", category: "Backend", level: 70, icon: "nodejs" },
+  { name: "Prisma", category: "Database", level: 65, icon: "prisma" },
+  { name: "PostgreSQL", category: "Database", level: 65, icon: "postgresql" },
+  { name: "Git", category: "DevOps", level: 75, icon: "git" },
 ];
 
 const blogPosts = [
