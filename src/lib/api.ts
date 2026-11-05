@@ -26,7 +26,7 @@ export function adminApi(methods: Methods) {
       }
 
       await handler(req, res, Number(session.user.id));
-    } catch (e) {
+    } catch (e: any) {
       if (e instanceof ZodError) {
         return res.status(400).json({ error: "Validation failed", issues: e.flatten().fieldErrors });
       }
@@ -35,7 +35,8 @@ export function adminApi(methods: Methods) {
         if (e.code === "P2025") return res.status(404).json({ error: "Not found" });
       }
       console.error("[api]", req.method, req.url, e);
-      res.status(500).json({ error: "Internal server error" });
+      const message = typeof e?.message === "string" && e.message ? e.message : "Internal server error";
+      res.status(500).json({ error: message });
     }
   };
 }
@@ -45,4 +46,3 @@ export function parseId(value: string | string[] | undefined): number | null {
   const n = Number(Array.isArray(value) ? value[0] : value);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
-
