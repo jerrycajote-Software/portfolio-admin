@@ -17,19 +17,21 @@ export default adminApi({
       return res.status(400).json({ error: "Missing dataUrl in request body" });
     }
 
-    const matches = dataUrl.match(/^data:([a-zA-Z0-9/+-]+);base64,(.+)$/);
-    if (!matches) {
+    const commaIndex = dataUrl.indexOf(",");
+    if (commaIndex === -1 || !dataUrl.startsWith("data:")) {
       return res.status(400).json({ error: "Invalid base64 Data URL format" });
     }
 
-    const detectedType = matches[1];
-    const base64Content = matches[2];
+    const header = dataUrl.substring(5, commaIndex);
+    const detectedType = header.split(";")[0]?.trim();
+    const base64Content = dataUrl.substring(commaIndex + 1).replace(/\s/g, "");
     const mimeType = contentType || detectedType;
 
     const allowedMimes = [
       "image/jpeg",
       "image/png",
       "image/webp",
+      "image/jpg",
       "application/pdf",
     ];
 
@@ -52,4 +54,3 @@ export default adminApi({
     res.status(200).json(result);
   },
 });
-

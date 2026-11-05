@@ -75,9 +75,11 @@ export function SignatureRedactionTool({
   const [file, setFile] = useState<File | null>(null);
   const [isPdf, setIsPdf] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [rawPdfDataUrl, setRawPdfDataUrl] = useState<string | null>(null);
+  const [bakedPreviewUrl, setBakedPreviewUrl] = useState<string | null>(() => initialImageUrl || null);
 
   // Multi-page PDF state
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -244,6 +246,20 @@ export function SignatureRedactionTool({
     });
   }, [zones, activeZoneId, blurIntensity, showWatermark]);
 
+  // Pre-load initial image if provided (e.g. editing existing certificate)
+  useEffect(() => {
+    if (!file && initialImageUrl && !sourceImageRef.current) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        sourceImageRef.current = img;
+        drawInteractivePreview();
+      };
+      img.src = initialImageUrl;
+      setBakedPreviewUrl(initialImageUrl);
+    }
+  }, [initialImageUrl, file, drawInteractivePreview]);
+
   useEffect(() => {
     if (sourceImageRef.current) {
       drawInteractivePreview();
@@ -339,6 +355,7 @@ export function SignatureRedactionTool({
     async (selectedFile: File) => {
       setFile(selectedFile);
       setUploadSuccess(false);
+      setUploadError(null);
       setStatusMessage("Reading document...");
 
       const isPdfFile =
@@ -403,6 +420,7 @@ export function SignatureRedactionTool({
         }
       } catch (err: any) {
         console.error("Error processing document:", err);
+        setUploadError(`Failed to load document: ${err.message}`);
         setStatusMessage(`Error loading document: ${err.message}`);
       }
     },
@@ -442,7 +460,6 @@ export function SignatureRedactionTool({
   // Remove privacy cover
   const handleRemoveZone = (idToRemove: string) => {
     if (zones.length <= 1) {
-      // Keep at least one, or reset coordinates
       return;
     }
     setZones((prev) => {
@@ -519,11 +536,16 @@ export function SignatureRedactionTool({
     isDraggingRef.current = false;
   };
 
-  // Bake pixel blur into high-res canvas + upload to Cloudflare R2
+  // Bake pixel blur into high-res canvas + upload to storage
   const handleRedactAndUpload = async () => {
+    setUploadError(null);
     const sourceImg = sourceImageRef.current;
     const hiddenCanvas = hiddenCanvasRef.current;
-    if (!sourceImg || !hiddenCanvas) return;
+
+    if (!sourceImg || !hiddenCanvas) {
+      setUploadError("Document image is not ready. Please select or drop a file first.");
+      return;
+    }
 
     setIsProcessing(true);
     setStatusMessage("Baking privacy covers into certificate image...");
@@ -532,7 +554,7 @@ export function SignatureRedactionTool({
       hiddenCanvas.width = sourceImg.width;
       hiddenCanvas.height = sourceImg.height;
       const ctx = hiddenCanvas.getContext("2d");
-      if (!ctx) throw new Error("Could not get 2D context");
+      if (!ctx) throw new Error("Could not get 2D canvas context");
 
       // Draw original full-res image
       ctx.drawImage(sourceImg, 0, 0);
@@ -561,14 +583,16 @@ export function SignatureRedactionTool({
         }
       });
 
-      setStatusMessage("Uploading sanitized certificate to Cloudflare R2...");
+      setStatusMessage("Uploading sanitized certificate image...");
 
-      // Export sanitized image as WebP
+      // Export sanitized image as WebP (or browser PNG fallback)
       const sanitizedDataUrl = hiddenCanvas.toDataURL("image/webp", 0.92);
+      const actualMime = sanitizedDataUrl.split(";")[0]?.replace("data:", "") || "image/webp";
+      const ext = actualMime === "image/png" ? "png" : "webp";
 
       const baseName = file?.name.replace(/\.[^/.]+$/, "") || "certificate";
       const pageSuffix = totalPages > 1 ? `-p${activePageIndex}` : "";
-      const sanitizedFilename = `${baseName}${pageSuffix}-sanitized.webp`;
+      const sanitizedFilename = `${baseName}${pageSuffix}-sanitized.${ext}`;
 
       // Upload sanitized image
       const res = await fetch("/api/upload", {
@@ -577,14 +601,14 @@ export function SignatureRedactionTool({
         body: JSON.stringify({
           dataUrl: sanitizedDataUrl,
           filename: sanitizedFilename,
-          contentType: "image/webp",
+          contentType: actualMime,
           folder: "certificates",
         }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to upload to Cloudflare R2");
+        throw new Error(err.error || `Upload failed with HTTP ${res.status}`);
       }
 
       const uploadResult = await res.json();
@@ -592,19 +616,24 @@ export function SignatureRedactionTool({
       // Upload raw multi-page PDF if available
       let pdfUrl: string | null = null;
       if (isPdf && rawPdfDataUrl) {
-        const pdfRes = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            dataUrl: rawPdfDataUrl,
-            filename: file?.name || "document.pdf",
-            contentType: "application/pdf",
-            folder: "certificates/pdf",
-          }),
-        });
-        if (pdfRes.ok) {
-          const pdfJson = await pdfRes.json();
-          pdfUrl = pdfJson.url;
+        setStatusMessage("Uploading original PDF document...");
+        try {
+          const pdfRes = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              dataUrl: rawPdfDataUrl,
+              filename: file?.name || "document.pdf",
+              contentType: "application/pdf",
+              folder: "certificates/pdf",
+            }),
+          });
+          if (pdfRes.ok) {
+            const pdfJson = await pdfRes.json();
+            pdfUrl = pdfJson.url;
+          }
+        } catch (pdfErr) {
+          console.warn("Raw PDF upload skipped/failed:", pdfErr);
         }
       }
 
@@ -619,7 +648,6 @@ export function SignatureRedactionTool({
           height: z.height,
           label: z.label,
         })),
-        // Fallback properties for backwards compatibility
         x: primaryZone.x,
         y: primaryZone.y,
         width: primaryZone.width,
@@ -631,19 +659,22 @@ export function SignatureRedactionTool({
         redactedAt: new Date().toISOString(),
       });
 
+      setBakedPreviewUrl(sanitizedDataUrl);
+      setUploadSuccess(true);
+      setStatusMessage(
+        `Successfully uploaded (${uploadResult.provider})! ${zones.length} privacy cover(s) permanently baked.`
+      );
+
       onUploadComplete({
         imageUrl: uploadResult.url,
         pdfUrl,
         blurData,
       });
-
-      setUploadSuccess(true);
-      setStatusMessage(
-        `Successfully uploaded to Cloudflare R2 (${uploadResult.provider})! ${zones.length} privacy cover(s) permanently baked.`
-      );
     } catch (err: any) {
       console.error("Upload error:", err);
-      setStatusMessage(`Upload failed: ${err.message}`);
+      const errMsg = err.message || "Failed to upload certificate";
+      setUploadError(errMsg);
+      setStatusMessage(`Upload failed: ${errMsg}`);
     } finally {
       setIsProcessing(false);
     }
@@ -655,13 +686,13 @@ export function SignatureRedactionTool({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 gap-2">
         <div>
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <span>🛡️ Signature Redaction &amp; Cloudflare R2 Upload</span>
+            <span>🛡️ Signature Redaction &amp; Media Upload</span>
             <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
               PDF &amp; Image
             </span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Upload single or multi-page documents. Add multiple privacy covers, adjust positions, preview all pages, and export.
+            Upload single or multi-page documents. Add privacy covers over signatures or seals, preview in real time, and save.
           </p>
         </div>
 
@@ -700,7 +731,7 @@ export function SignatureRedactionTool({
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            <span>{file ? file.name : "Select or Drop PDF / Image file"}</span>
+            <span>{file ? file.name : (initialImageUrl ? "Change PDF / Certificate File" : "Select or Drop PDF / Image file")}</span>
           </div>
           <span className="text-[11px] text-slate-400 mt-1">
             Accepts multi-page .pdf, .png, .jpg, .jpeg, .webp (up to 25MB)
@@ -1033,6 +1064,55 @@ export function SignatureRedactionTool({
             />
           </div>
 
+          {/* Error Banner Right Above Button */}
+          {uploadError && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-medium flex items-center justify-between gap-3 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-base flex-shrink-0">⚠️</span>
+                <span className="truncate">{uploadError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRedactAndUpload}
+                disabled={isProcessing}
+                className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex-shrink-0 transition-colors shadow-xs"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Success Baked Document Preview Card */}
+          {uploadSuccess && bakedPreviewUrl && (
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <span className="text-emerald-600 font-extrabold text-sm">✓</span>
+                  <span>Cover(s) Baked &amp; Certificate File Attached!</span>
+                </span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-full uppercase">
+                  Ready to Save
+                </span>
+              </div>
+
+              <div className="flex items-center gap-4 bg-white/80 p-2.5 rounded-xl border border-emerald-200">
+                <img
+                  src={bakedPreviewUrl}
+                  alt="Redacted certificate thumbnail"
+                  className="w-24 h-16 object-contain rounded-lg border border-slate-200 bg-slate-50 shadow-xs flex-shrink-0"
+                />
+                <div className="text-xs text-slate-700 space-y-0.5 min-w-0">
+                  <p className="font-bold text-slate-900">
+                    {zones.length} Privacy Cover(s) Permanently Applied
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {isPdf ? `Rendered from Page ${activePageIndex} of ${totalPages}.` : "Image sanitized."} The redacted image is attached and will be stored when you submit the form.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action Upload Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
             <span className="text-xs text-slate-500">
@@ -1045,16 +1125,33 @@ export function SignatureRedactionTool({
               type="button"
               disabled={isProcessing}
               onClick={handleRedactAndUpload}
-              className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 transition-all shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2"
+              className={`px-5 py-2.5 rounded-xl font-bold text-xs text-white transition-all shadow-md flex items-center justify-center gap-2 ${
+                uploadSuccess
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/25"
+                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/25"
+              } disabled:opacity-50`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span>
-                {isProcessing
-                  ? "Redacting & Uploading..."
-                  : `Apply ${zones.length} Cover(s) & Upload to Cloudflare R2`}
-              </span>
+              {isProcessing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span>Applying Covers &amp; Uploading...</span>
+                </>
+              ) : uploadSuccess ? (
+                <>
+                  <span>✓</span>
+                  <span>Re-apply &amp; Update Attached File</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <span>Apply {zones.length} Cover(s) &amp; Attach File</span>
+                </>
+              )}
             </button>
           </div>
         </div>

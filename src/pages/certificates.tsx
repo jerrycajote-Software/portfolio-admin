@@ -424,11 +424,99 @@ export default function AdminCertificates({
                 initialPdfUrl={watch("pdfUrl")}
                 initialBlurData={watch("blurData")}
                 onUploadComplete={(result) => {
-                  setValue("imageUrl", result.imageUrl, { shouldValidate: true });
-                  if (result.pdfUrl) setValue("pdfUrl", result.pdfUrl);
-                  if (result.blurData) setValue("blurData", result.blurData);
+                  setValue("imageUrl", result.imageUrl, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  });
+                  if (result.pdfUrl) {
+                    setValue("pdfUrl", result.pdfUrl, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
+                  }
+                  if (result.blurData) {
+                    setValue("blurData", result.blurData, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
+                  }
                 }}
               />
+
+              {/* Attached Document Visual Confirmation Card */}
+              {(currentImageUrl || watch("pdfUrl")) && (
+                <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    {currentImageUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImage(currentImageUrl)}
+                        className="relative w-16 h-12 rounded-xl overflow-hidden border border-indigo-300 shadow-xs bg-white flex-shrink-0 group cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-all"
+                        title="Click to preview certificate full-screen"
+                      >
+                        <img
+                          src={currentImageUrl}
+                          alt="Certificate Thumbnail"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                      </button>
+                    ) : (
+                      <div className="w-16 h-12 rounded-xl bg-indigo-100 border border-indigo-300 flex items-center justify-center text-xl flex-shrink-0">
+                        📄
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-800">
+                          Attached Certificate Document
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                          ✓ File Attached
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-mono truncate max-w-sm sm:max-w-md mt-0.5">
+                        {currentImageUrl || watch("pdfUrl")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {currentImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImage(currentImageUrl)}
+                        className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-indigo-700 text-xs font-semibold shadow-xs border border-indigo-200 transition-colors"
+                      >
+                        Preview Image
+                      </button>
+                    )}
+                    {watch("pdfUrl") && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewPdfUrl(watch("pdfUrl")!)}
+                        className="px-3 py-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold border border-rose-300 transition-colors flex items-center gap-1"
+                      >
+                        <span>📄 Preview PDF</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setValue("imageUrl", "", { shouldValidate: true, shouldDirty: true });
+                        setValue("pdfUrl", "", { shouldValidate: true, shouldDirty: true });
+                        setValue("blurData", "", { shouldValidate: true, shouldDirty: true });
+                      }}
+                      className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors font-medium"
+                      title="Detach file"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
